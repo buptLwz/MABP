@@ -1,0 +1,47 @@
+_BASE_: referring_R50.yaml
+MODEL:
+  BACKBONE:
+    NAME: "D2SwinTransformer"
+  SWIN:
+    EMBED_DIM: 128
+    DEPTHS: [2, 2, 18, 2]
+    NUM_HEADS: [4, 8, 16, 32]
+    WINDOW_SIZE: 12
+    APE: False
+    DROP_PATH_RATE: 0.3
+    PATCH_NORM: True
+    PRETRAIN_IMG_SIZE: 384
+    OUT_FEATURES: [res2,res3,res4,res5,lang2,lang3,lang4,lang5]
+  WEIGHTS: "models/swin_base_patch4_window12_384_22k.pkl"
+  PIXEL_MEAN: [123.675, 116.280, 103.530]
+  PIXEL_STD: [58.395, 57.120, 57.375]
+  MASK_FORMER:
+    NUM_OBJECT_QUERIES: 16
+    LANG_ATT_WEIGHT: 0.1
+    NO_OBJECT_WEIGHT: 0.1
+    CLASS_WEIGHT: 2.0
+    MASK_WEIGHT: 5.0
+    DICE_WEIGHT: 5.0
+    A_WEIGHT : 5.0
+    B_WEIGHT : 0.5
+    C_WEIGHT : 2.5
+    D_WEIGHT : 5.0
+    E_WEIGHT : 0.5
+
+
+TEST:
+  EVAL_PERIOD: 2872
+SOLVER:
+  #LR_SCHEDULER_NAME: WarmupCosineRestartLR
+  IMS_PER_BATCH: 42
+  BASE_LR: 0.00002
+  GAMMA: 0.5
+  STEPS: (57440,91904) #(68928, 97648)
+  #BASE_LR_END: 5.0e-06
+  #RESTART_ITER: (23200,52200)
+  MAX_ITER: 103392
+  CHECKPOINT_PERIOD: 2872
+
+DATASETS:
+  TRAIN: ("refcoco_unc_train",)
+  TEST: ("refcoco_unc_val",)
