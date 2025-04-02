@@ -1,0 +1,65 @@
+# Inherited from ReLA
+_BASE_: referring_R50.yaml
+MODEL:
+  BACKBONE:
+    NAME: "D2SwinTransformer"
+  SWIN:
+    EMBED_DIM: 128
+    DEPTHS: [2, 2, 18, 2]
+    NUM_HEADS: [4, 8, 16, 32]
+    WINDOW_SIZE: 12
+    APE: False
+    DROP_PATH_RATE: 0.3
+    PATCH_NORM: True
+    PRETRAIN_IMG_SIZE: 384
+    OUT_FEATURES: [res2,res3,res4,res5]
+  WEIGHTS: "models/swin_base_patch4_window12_384_22k.pkl"
+  PIXEL_MEAN: [123.675, 116.280, 103.530]
+  PIXEL_STD: [58.395, 57.120, 57.375]
+  MASK_FORMER:
+    NUM_OBJECT_QUERIES: 16
+    LANG_ATT_WEIGHT: 0.1
+    NO_OBJECT_WEIGHT: 0.1
+    CLASS_WEIGHT: 2.0
+
+################################################################
+#for MABP
+
+REFERRING:
+  BERT_TYPE: /data/lwz/data/bert-base-uncased #BERT path
+TEST:
+  EVAL_PERIOD:  4385 #per epoch
+
+SOLVER:
+  LR_SCHEDULER_NAME: WarmupCosineRestartLR
+  IMS_PER_BATCH: 18 # batch size
+  BASE_LR: 0.00002 # start lr
+  BASE_LR_END: 1.8e-06 # end lr
+
+  # for restart cosine cycle -- just like torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
+  RESTART_ITER: (175400, ) # RESTART_ITER = END_ITER means no Restart
+
+  # We maintain the learning rate constant of MABP in the early stages of training
+  START_ITER: 109625 # lr decrease from 25 epoch = 25 * 4385 = 109625
+
+  END_ITER: 175400 #40 epoch = 40 * 4385 = 175400
+  MAX_ITER: 175400 #40 epoch = 40 * 4385 = 175400
+  CHECKPOINT_PERIOD: 4385 #per epoch: total number // batch size = 78930 / 18 = 4385
+
+# The optimal random seed configuration on our machine
+SEED0: 26566879
+SEED1: 23414581
+
+# Weight of each loss
+CE_final_WEIGHT: 5.0
+CE_intermedia_WEIGHT: 0.5
+CE_nt_WEIGHT: 2.5
+Dice_final_WEIGHT: 5.0
+Dice_intermedia_WEIGHT: 0.5
+
+DATASETS:
+  # TRAIN and TEST have been registed in gres_model/data/datasets/register_refcoco.py
+  TRAIN: ("grefcoco_unc_train.lmdb",) #total number: 78930
+  TEST: ("grefcoco_unc_val.lmdb",)
+  
+  LMDB_ROOT: /data/lwz/MABP/datasets/lmdb
