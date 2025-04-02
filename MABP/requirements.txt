@@ -1,7 +1,0 @@
-cython
-transformers
-scipy
-shapely
-timm
-h5py
-scikit-image
