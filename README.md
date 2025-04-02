@@ -14,7 +14,7 @@ This repository contains code for **TMM** paper:
 </div><br/>
 
 ## Update
-- **(2025/04/01)** We have updated full codes.
+- **(2025/04/02)** We have updated full codes.
 - **(2024/09/27)** A simple version is released.
 
 ## Installation:
