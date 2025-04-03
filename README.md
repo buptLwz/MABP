@@ -10,11 +10,11 @@ This repository contains code for **TMM** paper:
 
 
 <div align="center">
-  <img src="/data/lwz/MABP-git/fig/archi-rsh-1.png" width="100%" height="100%"/>
+  <img src="fig/archi-rsh-1.png" width="100%" height="100%"/>
 </div><br/>
 
 ## Update
-- **(2025/04/01)** We have updated full codes.
+- **(2025/04/02)** We have updated full codes.
 - **(2024/09/27)** A simple version is released.
 
 ## Installation:
@@ -25,7 +25,7 @@ The code is tested under same environment as ReLA
 
 2. Prepare the dataset following ```datasets/DATASET.md```
 
-3. Download the best weights we provide in <a href="https://drive.google.com/file/d/1qxjwyFVtrscKNB7WF3xwi7etJMf0qm1_/view?usp=sharing" title="model">MABP_best</a>
+3. Download the best weights we provide in <a href="https://pan.baidu.com/s/1eroxdTSnGvihZs293ODEHg?pwd=ysjw" title="model">MABP_best</a>
 ## Inference
 
 ```
