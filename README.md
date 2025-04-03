@@ -25,7 +25,7 @@ The code is tested under same environment as ReLA
 
 2. Prepare the dataset following ```datasets/DATASET.md```
 
-3. Download the best weights we provide in <a href="https://drive.google.com/file/d/1qxjwyFVtrscKNB7WF3xwi7etJMf0qm1_/view?usp=sharing" title="model">MABP_best</a>
+3. Download the best weights we provide in <a href="[https://drive.google.com/file/d/1qxjwyFVtrscKNB7WF3xwi7etJMf0qm1_/view?usp=sharing](https://pan.baidu.com/s/1eroxdTSnGvihZs293ODEHg?pwd=ysjw)" title="model">MABP_best</a>
 ## Inference
 
 ```
