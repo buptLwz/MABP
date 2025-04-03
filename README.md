@@ -10,7 +10,7 @@ This repository contains code for **TMM** paper:
 
 
 <div align="center">
-  <img src="/data/lwz/MABP-git/fig/archi-rsh-1.png" width="100%" height="100%"/>
+  <img src="./fig/archi-rsh-1.png" width="100%" height="100%"/>
 </div><br/>
 
 ## Update
