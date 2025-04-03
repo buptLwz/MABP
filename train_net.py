@@ -223,7 +223,7 @@ class Trainer(DefaultTrainer):
                 dataset_name,
                 distributed=True,
                 output_dir=output_folder,
-                #save_imgs=True     # for visualization
+                #save_imgs=True     # for visualization, if ture, we provide tools/convert_png.py to transfer the saved .pth to .png
             )
         )
         return DatasetEvaluators(evaluator_list)

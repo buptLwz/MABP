@@ -69,7 +69,10 @@ SOLVER.BASE_LR 0.00001
 
 For the full list of base configs, see `configs/referring_R50.yaml` and `configs/Base-COCO-InstanceSegmentation.yaml`
 
+## For single-object dataset
+In fact, to apply MABP to a single-target dataset, it is only necessary to annotate out all the no-target branches. We have provided examples in our code, which can be found in ```gres_model\MABP-so.py```, ```gres_model\modeling\criterion-so.py```, and ```gres_model\modeling\transformer_decoder\referring_transformer_decoder-so.py```. 
 
+Generally, after preparing the lmdb, modifying these three files along with the corresponding configuration files is sufficient to convert to a single-target MABP model.
 
 ## Acknowledgement
 
