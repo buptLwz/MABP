@@ -15,6 +15,7 @@ from detectron2.utils.memory import retry_if_cuda_oom
 
 from .modeling.criterion import ReferringCriterion
 
+from .data_prepare import prepare_data
 '''main detectron2 model'''
 @META_ARCH_REGISTRY.register()
 class MABP(nn.Module):
@@ -136,10 +137,10 @@ class MABP(nn.Module):
         return self.pixel_mean.device
     
     #@torch.compile()
-    def forward(self, data):
+    def forward(self, input):
 
-        # The normalization is completed in gres_model/data_prepare.py (train_net.py line 104)
-        images = data['images']
+        data = prepare_data(input,self.training) # normalization and collate
+        images = data['images'] 
         gtmasks = data['masks']
         emptys = data['emptys']
         

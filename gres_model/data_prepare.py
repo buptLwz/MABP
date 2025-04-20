@@ -1,6 +1,6 @@
 import torch
 
-def prepare_data(data,test=False):
+def prepare_data(data,train=True):
     pixel_mean=torch.as_tensor([123.675,116.28,103.53]).view(-1, 1, 1)
     pixel_std=torch.as_tensor([58.395,57.12,57.375]).view(-1, 1, 1)
     size_divisibility= 32
@@ -17,7 +17,7 @@ def prepare_data(data,test=False):
     masks = torch.cat(masks,dim=0)
 
 
-    if test:
+    if not train:
         assert len(data)==1
         lang_tokens = [i.cuda(non_blocking=True) for i in data[0]['lang_tokens']]
         lang_masks = [i.cuda(non_blocking=True) for i in data[0]['lang_masks']]

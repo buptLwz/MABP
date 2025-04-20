@@ -20,19 +20,11 @@ INPUT:
 """
 
 if __name__ == "__main__":
-    input = '/data/lwz/MABP/exp420/model_0144704.pth'
+    input = sys.argv[1]
 
     obj = torch.load(input, map_location="cpu")["model"]
-    rename_obj ={}
-    print(obj.keys())
-    for k,v in obj.items():
-        if k.startswith('sem_seg_head.predictor.RIA_cross_attention'):
-            rename_obj[k.replace('sem_seg_head.predictor.RIA_cross_attention','sem_seg_head.predictor.MMD_cross_attention')]=v
-        elif k.startswith('sem_seg_head.predictor.self_attention_layers'):
-            rename_obj[k.replace('sem_seg_head.predictor.self_attention_layers','sem_seg_head.predictor.MMD_self_attention')]=v 
-        else:
-            rename_obj[k]=v
-    res = {"model": rename_obj}
 
-    with open('/data/lwz/MABP-git/MABP_best.pth', "wb") as f:
-        torch.save(res, f)
+    res = {"model": obj, "__author__": "third_party", "matching_heuristics": True}
+
+    with open(sys.argv[2], "wb") as f:
+        pkl.dump(res, f)

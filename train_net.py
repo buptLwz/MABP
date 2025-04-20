@@ -2,6 +2,8 @@
 MABP Training Script.
 
 This script is a modified version of the training script in ReLA https://github.com/henghuiding/ReLA.
+
+
 """
 #python train_net.py --config-file configs/gres-420-1019.yaml  --num-gpus 2 --dist-url auto    MODEL.WEIGHTS /data/lwz/MABP/swin_base_patch4_window12_384_22k.pkl    OUTPUT_DIR try1019
 try:
@@ -20,11 +22,10 @@ import os
 from functools import reduce
 import operator
 
-from collections import OrderedDict
 from typing import Any, Dict, List, Set
 
 import torch
-import torch.utils.data as torchdata
+
 
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer
@@ -33,11 +34,11 @@ from detectron2.data import build_detection_train_loader, build_detection_test_l
 from detectron2.engine import (
     DefaultTrainer,
     default_argument_parser,
-    perrankseed_setup,
+    default_setup,
     launch,
     create_ddp_model
 )
-from detectron2.evaluation import DatasetEvaluators, verify_results,DataBefore_inference_on_dataset
+from detectron2.evaluation import DatasetEvaluators, verify_results
 
 from detectron2.projects.deeplab import add_deeplab_config, build_lr_scheduler
 from detectron2.solver.build import maybe_add_gradient_clipping
@@ -49,111 +50,19 @@ from gres_model import (
     add_maskformer2_config,
     add_refcoco_config,
     RefCOCOMapperlmdb,
-    prepare_data
 )
 from detectron2.engine.train_loop import AMPTrainer,HookBase
-import time
-from detectron2.utils.events import EventStorage, get_event_storage
+
+from detectron2.utils.events import EventStorage
 import weakref
 
-from detectron2.evaluation import (
-    DatasetEvaluator,
-    print_csv_format,
-    verify_results,
-)
+from detectron2.evaluation import verify_results
 from detectron2.utils.logger import _log_api_usage
 torch.set_float32_matmul_precision("high")
 
 
-
-class DataBeforeTrainer(AMPTrainer):
-    '''We have rewritten the run_step of AMPTrainer here to improve scalability.
-    DataBeforeTrainer separate the data preparation (CUDA, normalization, and totensor) in ReLA from model.py
-    to provide an interface for future data augmentation and expanding batch sizes during testing'''
-
-    def __init__(self, model, data_loader, optimizer, gather_metric_period=1, 
-                 zero_grad_before_forward=False, grad_scaler=None, 
-                 precision: torch.dtype = torch.float16, 
-                 log_grad_scaler: bool = False, 
-                 async_write_metrics=False):
-        super().__init__(model, data_loader, optimizer, gather_metric_period, 
-                         zero_grad_before_forward, grad_scaler, precision, 
-                         log_grad_scaler, async_write_metrics)
-        
-        if grad_scaler is None:
-            from torch.amp import GradScaler
-            grad_scaler = GradScaler('cuda')
-
-        self.grad_scaler = grad_scaler
-        self.precision = precision
-        self.log_grad_scaler = log_grad_scaler
-
-    
-    def run_step(self):
-        """
-        Implement the AMP training logic.
-        """
-
-        assert self.model.training, "[AMPTrainer] model was changed to eval mode!"
-        assert torch.cuda.is_available(), "[AMPTrainer] CUDA is required for AMP training!"
-        from torch.amp import autocast
-
-        start = time.perf_counter()
-        data = next(self._data_loader_iter)
-        
-        data = prepare_data(data) # for data preprocessing
-        
-        data_time = time.perf_counter() - start
-        
-
-        if self.zero_grad_before_forward:
-            self.optimizer.zero_grad()
-
-        with autocast('cuda',dtype=self.precision):
-        
-            loss_dict = self.model(data)
-
-            if isinstance(loss_dict, torch.Tensor):
-                losses = loss_dict
-                loss_dict = {"total_loss": loss_dict}
-            else:
-                losses = sum(loss_dict.values())
-
-        if not self.zero_grad_before_forward:
-            self.optimizer.zero_grad()
-
-        self.grad_scaler.scale(losses).backward()
-
-        if self.log_grad_scaler:
-            storage = get_event_storage()
-            storage.put_scalar("[metric]grad_scaler", self.grad_scaler.get_scale())
-
-        self.after_backward()
-
-        if self.async_write_metrics:
-            # write metrics asynchronically
-            self.concurrent_executor.submit(
-                self._write_metrics, loss_dict, data_time, iter=self.iter
-            )
-        else:
-            self._write_metrics(loss_dict, data_time)
-
-        self.grad_scaler.step(self.optimizer)
-        self.grad_scaler.update()
-    
-    def reset_data_loader(self, data_loader_builder,cfg):
-        """
-        Delete and replace the current data loader with a new one, which will be created
-        by calling `data_loader_builder` (without argument).
-        """
-        del self.data_loader
-        data_loader = data_loader_builder(cfg)
-        self.data_loader = data_loader
-        self._data_loader_iter_obj = None
-    
-
 class Trainer(DefaultTrainer):
-    '''same as ReLA except self._trainer'''
+    '''same as ReLA except mapper'''
 
     def __init__(self, cfg):
         """
@@ -179,7 +88,7 @@ class Trainer(DefaultTrainer):
 
         model = create_ddp_model(model, broadcast_buffers=False)
 
-        self._trainer = DataBeforeTrainer(   # use our modified trainer
+        self._trainer = AMPTrainer(   # use AMPTrainer
             model, data_loader, optimizer
         )
         
@@ -335,65 +244,9 @@ class Trainer(DefaultTrainer):
             raise NotImplementedError(f"no optimizer type {optimizer_type}")
         if not cfg.SOLVER.CLIP_GRADIENTS.CLIP_TYPE == "full_model":
             optimizer = maybe_add_gradient_clipping(cfg, optimizer)
-        #optimizer.compile()
+
         return optimizer
     
-    @classmethod
-    def test(cls, cfg, model, evaluators=None):
-        """
-        Evaluate the given model. The given model is expected to already contain
-        weights to evaluate.
-
-        Args:
-            cfg (CfgNode):
-            model (nn.Module):
-            evaluators (list[DatasetEvaluator] or None): if None, will call
-                :meth:`build_evaluator`. Otherwise, must have the same length as
-                ``cfg.DATASETS.TEST``.
-
-        Returns:
-            dict: a dict of result metrics
-        """
-        logger = logging.getLogger(__name__)
-        if isinstance(evaluators, DatasetEvaluator):
-            evaluators = [evaluators]
-        if evaluators is not None:
-            assert len(cfg.DATASETS.TEST) == len(evaluators), "{} != {}".format(
-                len(cfg.DATASETS.TEST), len(evaluators)
-            )
-
-        results = OrderedDict()
-        for idx, dataset_name in enumerate(cfg.DATASETS.TEST):
-            data_loader = cls.build_test_loader(cfg, dataset_name)
-            # When evaluators are passed in as arguments,
-            # implicitly assume that evaluators can be created before data_loader.
-            if evaluators is not None:
-                evaluator = evaluators[idx]
-            else:
-                try:
-                    evaluator = cls.build_evaluator(cfg, dataset_name)
-                except NotImplementedError:
-                    logger.warn(
-                        "No evaluator found. Use `DefaultTrainer.test(evaluators=)`, "
-                        "or implement its `build_evaluator` method."
-                    )
-                    results[dataset_name] = {}
-                    continue
-            results_i = DataBefore_inference_on_dataset(model, data_loader, evaluator,logger=logger)
-            results[dataset_name] = results_i
-            if comm.is_main_process():
-                assert isinstance(
-                    results_i, dict
-                ), "Evaluator must return a dict on the main process. Got {} instead.".format(
-                    results_i
-                )
-                logger.info("Evaluation results for {} in csv format:".format(dataset_name))
-                print_csv_format(results_i)
-
-        if len(results) == 1:
-            results = list(results.values())[0]
-        return results
-
 
 
 def setup(args):
@@ -408,8 +261,19 @@ def setup(args):
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     cfg.freeze()
-    #default_setup(cfg, args)
-    perrankseed_setup(cfg,args)
+
+    '''
+    The default setup function of detectron2 [default_setup()] cannot individually set a random seed for each rank. 
+    (either completely random, or a seed for rank 0+rank_id)
+
+    So we provide a simple setup function for setting seeds separately for each rank. 
+    If necessary, you can enable the following two lines and comment out the default setup
+    '''
+    #from tools.perrankseedsetup import perrankseed_setup
+    #perrankseed_setup(cfg,args)
+
+    default_setup(cfg, args)
+    
     setup_logger(output=cfg.OUTPUT_DIR, distributed_rank=comm.get_rank(), name="referring")
     return cfg
 
