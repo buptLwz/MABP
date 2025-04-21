@@ -19,13 +19,19 @@ This repository contains code for **TMM** paper:
 
 ## Installation:
 
-The code is tested under same environment as ReLA
+The code is tested under an environment that is almost the same as that of ReLA.
+
+>Note: We use `PyTorch 2.3.1` and `CUDA 12.1` respectively. They are different from those in ReLA, but the configurations in ReLA are still applicable. 
+>
+>In addition, we recommend building `Detectron2` from source as described in [Docs](https://detectron2.readthedocs.io/en/latest/tutorials/install.html). It shares the same version `0.6` with the `pre-built` version, but there are significant differences, and it is compatible with newer versions of `PyTorch`.
 
 1. Follow <a href="https://github.com/henghuiding/ReLA">RELA</a> to prepare environment
 
-2. Prepare the dataset following ```datasets/DATASET.md```
+2. Prepare the dataset following [here](datasets/DATASET.md)
 
 3. Download the best weights we provide in <a href="https://pan.baidu.com/s/1eroxdTSnGvihZs293ODEHg?pwd=ysjw" title="model">MABP_best</a>
+
+4. Change the necessary items in the `configs/gres-MABP.yaml`.
 ## Inference
 
 ```
@@ -60,11 +66,14 @@ python train_net.py \
     OUTPUT_DIR [path to weights]
 ```
 
-Note: You can add your own configurations subsequently to the training command for customized options. For example:
+Note: In MABP, we modified and extended the default `WarmupCosineLR` of `Detectron2` to [`WarmupCosineRestartLR`](./gres_model/utils/WarmupCosineRestartLR.py). The relevant configurations can be found in `SOLVER` of `configs/gres-MABP.yaml`.
+
+[`WarmupCosineRestartLR`](./gres_model/utils/WarmupCosineRestartLR.py) reduces the LR per epoch rather than per iteration (which causes inconsistent LR for different batches within the same epoch). Moreover, it supplements `WarmupCosineLR` with the restart function originally proposed in [SGDR](https://arxiv.org/abs/1608.03983) and a constant interval. 
+
+However, the current default scheduler does not perform restarts. Its differences from `WarmupCosineLR` in `Detectron2` lie in the per-epoch decay and an initial constant interval. You can obtain the default form by changing `WarmupCosineRestartLR` to `WarmupCosineLR` in [config](./configs/Base-COCO-InstanceSegmentation.yaml). Alternatively, you can refer to the settings in `ReLA` and use the multistep decay method. For example:
 
 ```
-SOLVER.IMS_PER_BATCH 48 
-SOLVER.BASE_LR 0.00001 
+SOLVER.LR_SCHEDULER_NAME WarmupCosineLR 
 ```
 
 For the full list of base configs, see `configs/referring_R50.yaml` and `configs/Base-COCO-InstanceSegmentation.yaml`

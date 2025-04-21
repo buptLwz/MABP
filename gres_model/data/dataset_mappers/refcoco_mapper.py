@@ -150,7 +150,7 @@ class RefCOCOMapperlmdb:
         dataset_dict={}
         if self.env is None:
             self._init_db()
-        byteflow = self.txn.get(key)
+        byteflow = self.txn.get(key['key'])
         ref = loads_pyarrow(byteflow)
 
         image = cv2.imdecode(np.frombuffer(ref['image'], np.uint8),

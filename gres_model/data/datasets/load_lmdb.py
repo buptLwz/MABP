@@ -34,6 +34,5 @@ def load_lmdb(lmdb_dir):
         length = loads_pyarrow(txn.get(b'__len__'))
         keys = loads_pyarrow(txn.get(b'__keys__'))
 
-    return keys
-
+    return [{'key':i} for i in keys][:100]
 

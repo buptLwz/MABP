@@ -58,69 +58,13 @@ import weakref
 
 from detectron2.evaluation import verify_results
 from detectron2.utils.logger import _log_api_usage
+from gres_model.utils.WarmupCosineRestartLR import WarmupCosineRestartLR
 torch.set_float32_matmul_precision("high")
 
 
 class Trainer(DefaultTrainer):
-    '''same as ReLA except mapper'''
-
-    def __init__(self, cfg):
-        """
-        Args:
-            cfg (CfgNode):
-        """
-        self._hooks: List[HookBase] = []
-        self.iter: int = 0
-        self.start_iter: int = 0
-        self.max_iter: int
-        self.storage: EventStorage
-        _log_api_usage("trainer." + self.__class__.__name__)
-
-        logger = logging.getLogger("detectron2")
-        if not logger.isEnabledFor(logging.INFO):  # setup_logger is not called for d2
-            setup_logger()
-        cfg = DefaultTrainer.auto_scale_workers(cfg, comm.get_world_size())
-
-        # Assume these objects must be constructed in this order.
-        model = self.build_model(cfg)
-        optimizer = self.build_optimizer(cfg, model)
-        data_loader = self.build_train_loader(cfg)
-
-        model = create_ddp_model(model, broadcast_buffers=False)
-
-        self._trainer = AMPTrainer(   # use AMPTrainer
-            model, data_loader, optimizer
-        )
-        
-
-        self.scheduler = self.build_lr_scheduler(cfg, optimizer)
-        self.checkpointer = DetectionCheckpointer(
-            # Assume you want to save checkpoints together with logs/statistics
-            model,
-            cfg.OUTPUT_DIR,
-            trainer=weakref.proxy(self),
-        )
-        self.start_iter = 0
-        self.max_iter = cfg.SOLVER.MAX_ITER
-        self._trainer.max_iter = self.max_iter
-
-        self.cfg = cfg
-
-        self._period = cfg.TEST.EVAL_PERIOD
-        self.register_hooks(self.build_hooks())
-
-
-    def after_step(self):
+    '''same as ReLA except mapper and lr_scheduler'''
     
-        for h in self._hooks:
-            h.after_step()
-
-        next_iter = self._trainer.iter + 1
-        if self._period > 0 and next_iter % self._period == 0:
-            # do the last eval in after_train
-            if next_iter != self._trainer.max_iter:
-                self._trainer.reset_data_loader(self.build_train_loader,self.cfg)# = self.initfunc(self.cfg)
-
     @classmethod
     def build_evaluator(cls, cfg, dataset_name, output_folder=None):
         if output_folder is None:
@@ -151,6 +95,11 @@ class Trainer(DefaultTrainer):
 
     @classmethod
     def build_lr_scheduler(cls, cfg, optimizer):
+        if cfg.SOLVER.LR_SCHEDULER_NAME == 'WarmupCosineRestartLR':
+
+            #Self-implemented restartable cosine decay adapted for Detectron2 (just like torch.optim.lr_scheduler.CosineAnnealingWarmRestarts)
+            return WarmupCosineRestartLR(cfg,optimizer)
+        
         return build_lr_scheduler(cfg, optimizer)
 
     @classmethod

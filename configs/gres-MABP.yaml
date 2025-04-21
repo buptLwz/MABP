@@ -31,7 +31,7 @@ TEST:
   EVAL_PERIOD:  4385 #per epoch
 
 SOLVER:
-  LR_SCHEDULER_NAME: WarmupCosineRestartLR
+  LR_SCHEDULER_NAME: WarmupCosineRestartLR # refer to gres_model/utils/WarmupCosineRestartLR.py
   IMS_PER_BATCH: 18 # batch size
   BASE_LR: 0.00002 # start lr
   BASE_LR_END: 1.8e-06 # end lr
@@ -39,12 +39,18 @@ SOLVER:
   # for restart cosine cycle -- just like torch.optim.lr_scheduler.CosineAnnealingWarmRestarts
   RESTART_ITER: (175400, ) # RESTART_ITER = END_ITER means no Restart
 
+  WARMUP_ITERS: 10 # not use warmup
+
   # We maintain the learning rate constant of MABP in the early stages of training
   START_ITER: 109625 # lr decrease from 25 epoch = 25 * 4385 = 109625
 
   END_ITER: 175400 #40 epoch = 40 * 4385 = 175400
   MAX_ITER: 175400 #40 epoch = 40 * 4385 = 175400
+
   CHECKPOINT_PERIOD: 4385 #per epoch: total number // batch size = 78930 / 18 = 4385
+  # Note: The CHECKPOINT_PERIOD also affects the decay interval of the LR_SCHEDULER. 
+  # By default, MABP reduces the learning rate once after each CHECKPOINT_PERIOD 
+  # (unlike WarmupCosineLR, which decays the learning rate iteration by iteration).
 
 # The optimal random seed configuration on our machine
 SEED0: 26566879
