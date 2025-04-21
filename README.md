@@ -66,15 +66,14 @@ python train_net.py \
     OUTPUT_DIR [path to weights]
 ```
 
-Note: In MABP, we modified and extended the default `WarmupCosineLR` of `Detectron2` to [`WarmupCosineRestartLR`](./gres_model/utils/WarmupCosineRestartLR.py). The relevant configurations can be found in `SOLVER` of `configs/gres-MABP.yaml`.
+>Note: In MABP, we modified and extended the default [`WarmupCosineLR`](https://github.com/facebookresearch/detectron2/blob/400a49c1ec11a18dd25aea3910507bc3bcd15794/detectron2/solver/build.py#L283) of `Detectron2` to [`WarmupCosineRestartLR`](./gres_model/utils/WarmupCosineRestartLR.py). The relevant configurations can be found in `SOLVER` of `configs/gres-MABP.yaml`.
+>
+>`WarmupCosineRestartLR` reduces the LR per epoch rather than per iteration (which causes inconsistent LR for different batches within the same epoch). Moreover, it supplements `WarmupCosineLR` with the restart function originally proposed in [SGDR](https://arxiv.org/abs/1608.03983) and a constant interval. 
+>
+>However, the current default scheduler does not perform restarts. Its differences from `WarmupCosineLR` in `Detectron2` lie in the per-epoch decay and an initial constant interval. You can obtain the default form by changing `WarmupCosineRestartLR` to `WarmupCosineLR` in [config](./configs/Base-COCO-InstanceSegmentation.yaml). Alternatively, you can refer to the settings in `ReLA` and use the multistep decay method. For example:
+>
+>SOLVER.LR_SCHEDULER_NAME WarmupCosineLR 
 
-[`WarmupCosineRestartLR`](./gres_model/utils/WarmupCosineRestartLR.py) reduces the LR per epoch rather than per iteration (which causes inconsistent LR for different batches within the same epoch). Moreover, it supplements `WarmupCosineLR` with the restart function originally proposed in [SGDR](https://arxiv.org/abs/1608.03983) and a constant interval. 
-
-However, the current default scheduler does not perform restarts. Its differences from `WarmupCosineLR` in `Detectron2` lie in the per-epoch decay and an initial constant interval. You can obtain the default form by changing `WarmupCosineRestartLR` to `WarmupCosineLR` in [config](./configs/Base-COCO-InstanceSegmentation.yaml). Alternatively, you can refer to the settings in `ReLA` and use the multistep decay method. For example:
-
-```
-SOLVER.LR_SCHEDULER_NAME WarmupCosineLR 
-```
 
 For the full list of base configs, see `configs/referring_R50.yaml` and `configs/Base-COCO-InstanceSegmentation.yaml`
 
