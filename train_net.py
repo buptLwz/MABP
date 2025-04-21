@@ -16,7 +16,6 @@ except:
 
 import copy
 import itertools
-import logging
 import os
 
 from functools import reduce
@@ -36,7 +35,6 @@ from detectron2.engine import (
     default_argument_parser,
     default_setup,
     launch,
-    create_ddp_model
 )
 from detectron2.evaluation import DatasetEvaluators, verify_results
 
@@ -51,13 +49,10 @@ from gres_model import (
     add_refcoco_config,
     RefCOCOMapperlmdb,
 )
-from detectron2.engine.train_loop import AMPTrainer,HookBase
 
-from detectron2.utils.events import EventStorage
-import weakref
 
 from detectron2.evaluation import verify_results
-from detectron2.utils.logger import _log_api_usage
+
 from gres_model.utils.WarmupCosineRestartLR import WarmupCosineRestartLR
 torch.set_float32_matmul_precision("high")
 
