@@ -12,5 +12,5 @@ from .MABP import MABP
 
 # evaluation
 from .evaluation.refer_evaluation import ReferEvaluator
-from .test_utils import DataBefore_inference_on_dataset
+
 from .data_prepare import prepare_data
